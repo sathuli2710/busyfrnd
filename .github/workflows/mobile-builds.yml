@@ -1,0 +1,34 @@
+name: Mobile pre-builds
+on:
+  workflow_dispatch:
+    inputs:
+      api_url: { description: "Public API URL baked into the apps", required: true, default: "https://api.example.com" }
+  push:
+    tags: ["mobile-v*"]
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm }
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: 17 }
+      - uses: android-actions/setup-android@v3
+      - run: pnpm install --frozen-lockfile && pnpm build:packages
+      - run: API_URL="${{ inputs.api_url || 'https://api.example.com' }}" bash scripts/build-mobile.sh android all
+      - uses: actions/upload-artifact@v4
+        with: { name: android-apks, path: prebuilt/android/*.apk }
+  ios:
+    # Simulator builds (unsigned). Signed device/TestFlight builds: use EAS (see README) with your Apple account.
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm }
+      - run: pnpm install --frozen-lockfile && pnpm build:packages
+      - run: API_URL="${{ inputs.api_url || 'https://api.example.com' }}" bash scripts/build-mobile.sh ios all
+      - uses: actions/upload-artifact@v4
+        with: { name: ios-simulator-apps, path: prebuilt/ios/*.tar.gz }
