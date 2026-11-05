@@ -7,16 +7,52 @@
     "orientation": "portrait",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
-    "ios": { "bundleIdentifier": "app.busyfrnd.vendor", "supportsTablet": false },
-    "android": { "package": "app.busyfrnd.vendor", "permissions": ["ACCESS_COARSE_LOCATION", "ACCESS_FINE_LOCATION", "RECORD_AUDIO"] },
+    "ios": {
+      "bundleIdentifier": "app.busyfrnd.vendor",
+      "supportsTablet": false,
+      "infoPlist": {
+        "NSAppTransportSecurity": {
+          "NSAllowsLocalNetworking": true
+        }
+      }
+    },
+    "android": {
+      "package": "app.busyfrnd.vendor",
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION",
+        "RECORD_AUDIO"
+      ]
+    },
     "plugins": [
       "expo-router",
       "expo-secure-store",
-      ["expo-location", { "locationWhenInUsePermission": "Used to place your shop on the map so nearby customers can find it." }],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Used to place your shop on the map so nearby customers can find it."
+        }
+      ],
       "expo-web-browser",
       "expo-notifications",
-      ["expo-speech-recognition", { "microphonePermission": "Used so you can talk to your AI Buddy in your own language.", "speechRecognitionPermission": "Used to understand what you say in English, Hindi or Tamil." }]
+      [
+        "expo-speech-recognition",
+        {
+          "microphonePermission": "Used so you can talk to your AI Buddy in your own language.",
+          "speechRecognitionPermission": "Used to understand what you say in English, Hindi or Tamil."
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "usesCleartextTraffic": true
+          }
+        }
+      ]
     ],
-    "extra": { "apiUrl": "http://10.0.2.2:4000" }
+    "extra": {
+      "apiUrl": "http://10.0.2.2:4000"
+    }
   }
 }

@@ -50,6 +50,8 @@ Both apps have a **Server settings** panel on the login screen to point at any A
 ## Pre-built binaries
 * **Android (APK)** – `scripts/build-mobile.sh android [customer|vendor|all]` builds release APKs into `prebuilt/android/` (needs JDK 17 + Android SDK).
   `API_URL=https://api.yourdomain.com scripts/build-mobile.sh android all` bakes your API address in. `ANDROID_ARCHS` selects ABIs (default `arm64-v8a,x86_64`).
+* Pre-built APKs are signed with the Expo **debug keystore** (fine for sideloading/testing, **not** for Google Play) and allow plain-HTTP API calls (`usesCleartextTraffic` in each `app.json`) so they work
+  against a local/LAN server. **For production use an HTTPS API and remove that flag.**
 * **iOS** – cannot be built on Linux/Windows. `scripts/build-mobile.sh ios` (macOS + Xcode) produces simulator `.app` bundles. Installable device / TestFlight builds need an
   Apple Developer account: `pnpm --filter @busyfrnd/customer-mobile build:production` (EAS; profiles in each app's `eas.json`).
 * **CI** – `.github/workflows/mobile-builds.yml` builds Android APKs on Ubuntu and iOS simulator apps on macOS and uploads them as artifacts.

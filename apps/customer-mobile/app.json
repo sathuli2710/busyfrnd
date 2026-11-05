@@ -7,16 +7,48 @@
     "orientation": "portrait",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
-    "ios": { "bundleIdentifier": "app.busyfrnd.customer", "supportsTablet": false, "infoPlist": { "NSLocationWhenInUseUsageDescription": "Used to show stores near you." } },
-    "android": { "package": "app.busyfrnd.customer", "permissions": ["ACCESS_COARSE_LOCATION", "ACCESS_FINE_LOCATION"] },
+    "ios": {
+      "bundleIdentifier": "app.busyfrnd.customer",
+      "supportsTablet": false,
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Used to show stores near you.",
+        "NSAppTransportSecurity": {
+          "NSAllowsLocalNetworking": true
+        }
+      }
+    },
+    "android": {
+      "package": "app.busyfrnd.customer",
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION"
+      ]
+    },
     "plugins": [
       "expo-router",
       "expo-secure-store",
-      ["expo-location", { "locationWhenInUsePermission": "Used to show stores near you." }],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Used to show stores near you."
+        }
+      ],
       "expo-web-browser",
-      "expo-notifications"
+      "expo-notifications",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "usesCleartextTraffic": true
+          }
+        }
+      ]
     ],
-    "experiments": { "typedRoutes": false },
-    "extra": { "apiUrl": "http://10.0.2.2:4000" }
+    "experiments": {
+      "typedRoutes": false
+    },
+    "extra": {
+      "apiUrl": "http://10.0.2.2:4000"
+    }
   }
 }
