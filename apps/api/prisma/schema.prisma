@@ -1,0 +1,305 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  CUSTOMER
+  VENDOR
+  ADMIN
+}
+enum OtpChannel {
+  PHONE
+  EMAIL
+}
+enum StoreStatus {
+  DRAFT
+  IN_REVIEW
+  APPROVED
+  REJECTED
+  PUBLISHED
+  SUSPENDED
+}
+enum ItemKind {
+  PRODUCT
+  SERVICE
+}
+enum Fulfillment {
+  PICKUP
+  DELIVERY
+}
+enum PaymentMode {
+  FULL
+  PARTIAL
+}
+enum OrderStatus {
+  PENDING_PAYMENT
+  PLACED
+  ACCEPTED
+  PREPARING
+  READY
+  OUT_FOR_DELIVERY
+  COMPLETED
+  CANCELLED
+}
+enum PayStatus {
+  CREATED
+  PAID
+  FAILED
+}
+enum Plan {
+  TRIAL
+  FREE
+  PLUS
+  PRO
+}
+
+model User {
+  id            String   @id @default(cuid())
+  role          Role     @default(CUSTOMER)
+  phone         String?
+  email         String?
+  phoneVerified Boolean  @default(false)
+  emailVerified Boolean  @default(false)
+  passwordHash  String?
+  clerkId       String?  @unique
+  name          String?
+  language      String   @default("en")
+  radiusKm      Int      @default(20)
+  lat           Float?
+  lng           Float?
+  pushToken     String?
+  createdAt     DateTime @default(now())
+
+  vendor        Vendor?
+  carts         Cart[]
+  orders        Order[]
+  notifications Notification[]
+
+  @@unique([phone, role])
+  @@unique([email, role])
+  @@index([role])
+}
+
+model OtpCode {
+  id        String     @id @default(cuid())
+  target    String
+  channel   OtpChannel
+  codeHash  String
+  expiresAt DateTime
+  attempts  Int        @default(0)
+  consumed  Boolean    @default(false)
+  createdAt DateTime   @default(now())
+
+  @@index([target, channel])
+}
+
+model Vendor {
+  id             String   @id @default(cuid())
+  userId         String   @unique
+  user           User     @relation(fields: [userId], references: [id])
+  plan           Plan     @default(TRIAL)
+  trialEndsAt    DateTime
+  periodEndsAt   DateTime?
+  aiTokensUsed   Int      @default(0)
+  aiPeriodStart  DateTime @default(now())
+  createdAt      DateTime @default(now())
+
+  stores   Store[]
+  aiUsage  AiUsage[]
+  payments SubscriptionPayment[]
+}
+
+model Store {
+  id          String      @id @default(cuid())
+  vendorId    String
+  vendor      Vendor      @relation(fields: [vendorId], references: [id])
+  name        String
+  nameLocal   String?
+  category    String      @default("other")
+  description String?
+  logoUrl     String?
+  coverUrl    String?
+  village     String?
+  address     String?
+  phone       String?
+  hours       String?
+  lat         Float
+  lng         Float
+  language    String      @default("en")
+  templateId  String
+  sections    Json?       // optional per-store section override (vendor customisation)
+  themeOverride Json?
+  status      StoreStatus @default(DRAFT)
+  publishWeb  Boolean     @default(false)
+  publishApp  Boolean     @default(false)
+  wantWeb     Boolean     @default(true)
+  wantApp     Boolean     @default(true)
+  rejectionReason String?
+  submittedAt DateTime?
+  publishedAt DateTime?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  // fulfilment & fees (paise)
+  offersPickup         Boolean @default(true)
+  offersDelivery       Boolean @default(false)
+  deliveryFee          Int     @default(0)
+  lowOrderThreshold    Int?
+  lowOrderDeliveryFee  Int?
+  freeDeliveryAbove    Int?
+  platformFee          Int     @default(0)
+  handlingFee          Int     @default(0)
+  visitingFee          Int     @default(0)
+  partialPaymentEnabled Boolean @default(false)
+  partialPercent       Int     @default(30)
+
+  items   Item[]
+  carts   Cart[]
+  orders  Order[]
+  reviews ReviewLog[]
+
+  @@index([status, lat, lng])
+  @@index([vendorId])
+}
+
+model Item {
+  id          String   @id @default(cuid())
+  storeId     String
+  store       Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  name        String
+  description String?
+  kind        ItemKind @default(PRODUCT)
+  pricePaise  Int
+  imageUrl    String?
+  category    String?
+  inStock     Boolean  @default(true)
+  archived    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  cartLines CartLine[]
+
+  @@index([storeId, archived])
+  @@index([name])
+}
+
+// One cart per (user, store)
+model Cart {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  storeId   String
+  store     Store    @relation(fields: [storeId], references: [id])
+  updatedAt DateTime @updatedAt
+  lines     CartLine[]
+
+  @@unique([userId, storeId])
+}
+
+model CartLine {
+  id     String @id @default(cuid())
+  cartId String
+  cart   Cart   @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  itemId String
+  item   Item   @relation(fields: [itemId], references: [id])
+  qty    Int
+
+  @@unique([cartId, itemId])
+}
+
+model Order {
+  id              String      @id @default(cuid())
+  userId          String
+  user            User        @relation(fields: [userId], references: [id])
+  storeId         String
+  store           Store       @relation(fields: [storeId], references: [id])
+  status          OrderStatus @default(PENDING_PAYMENT)
+  fulfillment     Fulfillment
+  paymentMode     PaymentMode
+  subtotal        Int
+  fees            Json
+  total           Int
+  payNow          Int
+  paid            Int         @default(0)
+  deliveryAddress String?
+  deliveryLat     Float?
+  deliveryLng     Float?
+  notes           String?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  lines    OrderLine[]
+  payments Payment[]
+
+  @@index([userId, createdAt])
+  @@index([storeId, createdAt])
+}
+
+model OrderLine {
+  id      String   @id @default(cuid())
+  orderId String
+  order   Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  itemId  String
+  name    String
+  kind    ItemKind
+  price   Int
+  qty     Int
+}
+
+model Payment {
+  id          String    @id @default(cuid())
+  orderId     String
+  order       Order     @relation(fields: [orderId], references: [id])
+  gatewayRef  String    @unique // our order id sent to Cashfree
+  amount      Int
+  status      PayStatus @default(CREATED)
+  raw         Json?
+  createdAt   DateTime  @default(now())
+}
+
+model SubscriptionPayment {
+  id         String    @id @default(cuid())
+  vendorId   String
+  vendor     Vendor    @relation(fields: [vendorId], references: [id])
+  plan       Plan
+  gatewayRef String    @unique
+  amount     Int
+  status     PayStatus @default(CREATED)
+  createdAt  DateTime  @default(now())
+}
+
+model ReviewLog {
+  id        String   @id @default(cuid())
+  storeId   String
+  store     Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  adminId   String
+  decision  String   // APPROVED | REJECTED | SUSPENDED | REINSTATED
+  notes     String?
+  createdAt DateTime @default(now())
+}
+
+model Notification {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id])
+  title     String
+  body      String
+  data      Json?
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId, createdAt])
+}
+
+model AiUsage {
+  id        String   @id @default(cuid())
+  vendorId  String
+  vendor    Vendor   @relation(fields: [vendorId], references: [id])
+  kind      String
+  tokens    Int
+  createdAt DateTime @default(now())
+}

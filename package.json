@@ -1,0 +1,25 @@
+{
+  "name": "busyfrnd",
+  "private": true,
+  "version": "0.1.0",
+  "packageManager": "pnpm@10.28.0",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "dev:api": "pnpm --filter @busyfrnd/api dev",
+    "dev:customer-web": "pnpm --filter @busyfrnd/customer-web dev",
+    "dev:vendor-web": "pnpm --filter @busyfrnd/vendor-web dev",
+    "dev:admin-web": "pnpm --filter @busyfrnd/admin-web dev",
+    "dev:customer-mobile": "pnpm --filter @busyfrnd/customer-mobile start",
+    "dev:vendor-mobile": "pnpm --filter @busyfrnd/vendor-mobile start",
+    "db:up": "docker compose up -d postgres",
+    "db:migrate": "pnpm --filter @busyfrnd/api prisma:migrate",
+    "db:seed": "pnpm --filter @busyfrnd/api prisma:seed",
+    "build:packages": "pnpm --filter @busyfrnd/shared build && pnpm --filter @busyfrnd/api-client build",
+    "build": "pnpm build:packages && pnpm -r --filter '!./apps/*-mobile' build",
+    "typecheck": "pnpm build:packages && pnpm -r --no-bail typecheck",
+    "test": "pnpm --filter @busyfrnd/shared test && pnpm --filter @busyfrnd/api test",
+    "mobile:build:android": "bash scripts/build-mobile.sh android",
+    "mobile:build:ios": "bash scripts/build-mobile.sh ios"
+  },
+  "devDependencies": { "typescript": "~5.8.3" }
+}

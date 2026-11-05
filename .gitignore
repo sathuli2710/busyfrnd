@@ -1,0 +1,14 @@
+node_modules
+dist
+.next
+.expo
+*.tsbuildinfo
+.env
+.env.local
+android/
+ios/
+*.apk
+*.aab
+*.ipa
+coverage
+.turbo
