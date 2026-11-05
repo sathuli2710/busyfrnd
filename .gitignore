@@ -12,3 +12,4 @@ ios/
 *.ipa
 coverage
 .turbo
+dist

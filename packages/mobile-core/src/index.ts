@@ -1,0 +1,10 @@
+export * from './theme';
+export * from './ui';
+export * from './app';
+export * from './OtpLogin';
+export * from './StoreView';
+export * from './location';
+export * from './pay';
+export const STATUS_TONE = { PENDING_PAYMENT: 'orange', PLACED: 'blue', ACCEPTED: 'blue', PREPARING: 'orange', READY: 'green', OUT_FOR_DELIVERY: 'green', COMPLETED: 'green', CANCELLED: 'red' } as const;
+export const fmtDate = (iso: string) => new Date(iso).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' });
+export const shortId = (id: string) => '#' + id.slice(-6).toUpperCase();

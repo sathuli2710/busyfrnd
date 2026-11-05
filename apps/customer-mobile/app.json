@@ -1,0 +1,22 @@
+{
+  "expo": {
+    "name": "BusyFrnd",
+    "slug": "busyfrnd-customer",
+    "version": "0.1.0",
+    "scheme": "busyfrnd-customer",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "ios": { "bundleIdentifier": "app.busyfrnd.customer", "supportsTablet": false, "infoPlist": { "NSLocationWhenInUseUsageDescription": "Used to show stores near you." } },
+    "android": { "package": "app.busyfrnd.customer", "permissions": ["ACCESS_COARSE_LOCATION", "ACCESS_FINE_LOCATION"] },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      ["expo-location", { "locationWhenInUsePermission": "Used to show stores near you." }],
+      "expo-web-browser",
+      "expo-notifications"
+    ],
+    "experiments": { "typedRoutes": false },
+    "extra": { "apiUrl": "http://10.0.2.2:4000" }
+  }
+}
