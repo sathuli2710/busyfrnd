@@ -19,7 +19,7 @@ build_one() {
     rm -rf android ios
     npx expo prebuild --platform "$PLATFORM" --no-install --clean
     if [ "$PLATFORM" = android ]; then
-      ( cd android && ./gradlew assembleRelease --no-daemon --max-workers=2 --no-parallel -Dorg.gradle.jvmargs="-Xmx4g -XX:MaxMetaspaceSize=1g" \
+      ( cd android && ./gradlew assembleRelease --no-daemon --console=plain --max-workers=3 -Dorg.gradle.jvmargs="-Xmx4g -XX:MaxMetaspaceSize=1g" \
           -PreactNativeArchitectures="${ANDROID_ARCHS:-arm64-v8a,x86_64}" )
       cp android/app/build/outputs/apk/release/app-release.apk "$OUT/busyfrnd-$app.apk"
     else
