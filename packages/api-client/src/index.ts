@@ -68,9 +68,9 @@ export function createApi(opts: ClientOptions) {
       update: (b: Partial<Pick<SessionUser, 'name' | 'email' | 'language' | 'radiusKm' | 'lat' | 'lng'>> & { pushToken?: string }) => call<SessionUser>('PATCH', '/me', b),
     },
     catalog: {
-      stores: (n: Near & { q?: string; category?: string }) => get<StoreSummary[]>('/catalog/stores' + qs(n)),
-      search: (n: Near & { q: string }) => get<{ stores: StoreSummary[]; items: Array<Item & { storeName: string; distanceKm: number }> }>('/catalog/search' + qs(n)),
-      store: (id: string, at?: { lat: number; lng: number }) => get<StorePage>(`/catalog/stores/${id}` + (at ? qs(at) : '')),
+      stores: (n: Near & { q?: string; category?: string }) => get<StoreSummary[]>('/catalog/stores' + qs({ lat: n.lat, lng: n.lng, radius: n.radius, q: n.q, category: n.category })),
+      search: (n: Near & { q: string }) => get<{ stores: StoreSummary[]; items: Array<Item & { storeName: string; distanceKm: number }> }>('/catalog/search' + qs({ lat: n.lat, lng: n.lng, radius: n.radius, q: n.q })),
+      store: (id: string, at?: { lat: number; lng: number }) => get<StorePage>(`/catalog/stores/${id}` + (at ? qs({ lat: at.lat, lng: at.lng }) : '')),
     },
     cart: {
       list: () => get<Cart[]>('/cart'),
@@ -109,7 +109,7 @@ export function createApi(opts: ClientOptions) {
     },
     ai: {
       onboarding: (text: string, language: Language) => call<OnboardingDraft>('POST', '/ai/onboarding', { text, language }),
-      shop: (b: { text: string; lat: number; lng: number; radius?: number; language: Language }) => call<ShopAnswer>('POST', '/ai/shop', b),
+      shop: (b: { text: string; lat: number; lng: number; radius?: number; language: Language }) => call<ShopAnswer>('POST', '/ai/shop', { text: b.text, lat: b.lat, lng: b.lng, radius: b.radius, language: b.language }),
       assistant: (text: string, language: Language) => call<{ reply: string; live: boolean }>('POST', '/ai/assistant', { text, language }),
     },
     admin: {

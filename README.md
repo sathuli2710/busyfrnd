@@ -15,6 +15,16 @@ an **admin review portal**, and the **NestJS/PostgreSQL backend** behind all of 
 Shared packages: `packages/shared` (types, pricing rules, plans, 64 layout templates, en/hi/ta strings, geo), `packages/api-client` (typed fetch client used by all 5 front-ends),
 `packages/web-ui` (React: provider, store renderer, voice hook, CSS), `packages/mobile-core` (React Native: provider, UI kit, store renderer, voice, location, payments).
 
+## Design system
+A single art direction across all six front-ends — high-contrast ink + white (Uber-like), a warm orange accent, and an indigo→violet **AI accent** that appears wherever AI is at work.
+No photos are required: stores and products get emoji-on-gradient artwork (`packages/shared/src/design.ts`).
+
+* **Web** (`packages/web-ui`) — Tailwind CSS v4 tokens, Radix Dialog (sheets), Motion (springs, layout animations, stagger), Lucide icons, Sonner toasts, plus our own wrapper components:
+  `Button`, `Card`, `Badge`, `Field/Input`, `Segmented`, `Tabs`, `Sheet`, `QtyStepper`, `Skeleton`, `EmptyState`, `OtpInput`, `AiOrb`, `AiPromptBar`, `AreaChart`, `OrderTimeline`, `Sidebar/BottomNav/Topbar`, `DataTable`, and the template-driven `StoreView`.
+* **Mobile** (`packages/mobile-core`) — Reanimated springs + haptics on every tap (`Tap`), Expo Linear Gradient / Blur, Ionicons, with wrappers such as `Btn`, `Card`, `Segmented`, `Toggle`, `Sheet` (bottom sheet), `Skeleton`, `ToastProvider`, `AiOrb`, `AiPromptBar`, `TabBar` (frosted, sliding indicator), `OrderTimeline`, `BarChart`, `StoreView`.
+* **AI-forward UX** — Customer: “Ask AI” natural-language shopping (`POST /ai/shop`, e.g. “birthday cake under ₹500”). Vendor: rotating **smart insights** (deterministic, no tokens spent), a voice orb, AI Buddy chat, and a draft-reviewing onboarding with live layout previews.
+* **Admin** — shadcn-style dashboard: collapsible dark sidebar, stat cards, 14-day GMV/orders charts, searchable tables, and a review screen with a phone-frame preview, checklist and decision panel.
+
 ## Quick start
 
 ```bash
@@ -59,7 +69,7 @@ Both apps have a **Server settings** panel on the login screen to point at any A
 
 ## What's implemented
 
-**Customer** – mobile-number OTP login (email optional) · nearby stores within a user-set radius (1–50 km, default 20) via bounding-box + haversine ·
+**Customer** – natural-language “Ask AI” search · mobile-number OTP login (email optional) · nearby stores within a user-set radius (1–50 km, default 20) via bounding-box + haversine ·
 store search and cross-store product/service search · **one cart per store** · checkout with **pickup (no delivery fee) or delivery** · **full payment, or part payment only if the store enabled it** ·
 Cashfree hosted checkout · order tracking · "ready for pickup" notifications (in-app + Expo push) · English / हिन्दी / தமிழ் · settings (radius, language, location).
 

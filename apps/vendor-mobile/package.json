@@ -33,7 +33,16 @@
     "expo-speech": "~13.1.7",
     "expo-speech-recognition": "^2.1.5",
     "expo-location": "~18.1.6",
-    "expo-build-properties": "~0.14.8"
+    "expo-build-properties": "~0.14.8",
+    "react-native-reanimated": "~3.17.4",
+    "expo-linear-gradient": "~14.1.5",
+    "expo-haptics": "~14.1.4",
+    "expo-blur": "~14.1.5",
+    "@expo/vector-icons": "^14.1.0",
+    "react-native-svg": "15.11.2",
+    "react-native-web": "~0.20.0",
+    "react-dom": "19.0.0",
+    "@expo/metro-runtime": "~5.0.4"
   },
   "devDependencies": {
     "@babel/core": "^7.25.0",

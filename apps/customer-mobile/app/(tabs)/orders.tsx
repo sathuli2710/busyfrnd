@@ -1,20 +1,28 @@
 import { useCallback, useState } from 'react';
+import { View } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { rupees, type OrderDto } from '@busyfrnd/shared';
-import { Badge, Card, Loading, Row, STATUS_TONE, Screen, T, fmtDate, shortId, useApp } from '@busyfrnd/mobile-core';
+import { Badge, Btn, Card, EmptyState, Enter, Icon, Row, STATUS_LABEL, STATUS_TONE, Screen, Skeleton, T, colors, fmtShort, shortId, useApp } from '@busyfrnd/mobile-core';
 
 export default function OrdersTab() {
-  const { api } = useApp();
+  const { api, t } = useApp();
   const router = useRouter();
   const [orders, setOrders] = useState<OrderDto[] | null>(null);
-  useFocusEffect(useCallback(() => { api.orders.list().then(setOrders).catch(() => setOrders([])); }, [api]));
-  if (!orders) return <Screen><Loading /></Screen>;
-  if (!orders.length) return <Screen><T muted>No orders yet.</T></Screen>;
+  const load = useCallback(() => api.orders.list().then(setOrders).catch(() => setOrders([])), [api]);
+  useFocusEffect(useCallback(() => { load(); }, [load]));
   return (
-    <Screen>{orders.map((o) => (
-      <Card key={o.id} onPress={() => router.push(`/order/${o.id}`)}>
-        <Row style={{ justifyContent: 'space-between' }}><T bold>{o.storeName}</T><Badge text={o.status.replace(/_/g, ' ')} tone={STATUS_TONE[o.status]} /></Row>
-        <T muted small>{shortId(o.id)} · {fmtDate(o.createdAt)} · {o.fulfillment}</T><T bold>{rupees(o.total)}</T>
-      </Card>))}</Screen>
+    <Screen title={t('nav.orders')} onRefresh={load} bottomInset={40}>
+      {!orders ? <><Skeleton style={{ height: 96, borderRadius: 24 }} /><Skeleton style={{ height: 96, borderRadius: 24 }} /></> : !orders.length
+        ? <EmptyState emoji="📦" title="No orders yet" hint="Your orders will show up here." action={<Btn title="Start shopping" onPress={() => router.navigate('/')} />} />
+        : orders.map((o, i) => (
+          <Enter key={o.id} i={i}>
+            <Card onPress={() => router.push(`/order/${o.id}`)}>
+              <Row style={{ justifyContent: 'space-between', flexWrap: 'nowrap' }}><T variant="headline" numberOfLines={1} style={{ flex: 1 }}>{o.storeName}</T><Badge tone={STATUS_TONE[o.status]} text={STATUS_LABEL[o.status]} /></Row>
+              <T small muted numberOfLines={1}>{shortId(o.id)} · {fmtShort(o.createdAt)} · {o.lines.map((l) => l.name).join(', ')}</T>
+              <Row style={{ justifyContent: 'space-between', flexWrap: 'nowrap' }}><T variant="label">{rupees(o.total)}</T><Row gap={4}><T small bold color={colors.brand}>{t('order.track')}</T><Icon name="chevron-forward" size={14} color={colors.brand} /></Row></Row>
+            </Card>
+          </Enter>))}
+      <View />
+    </Screen>
   );
 }

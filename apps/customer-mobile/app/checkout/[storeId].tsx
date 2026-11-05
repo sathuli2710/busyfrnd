@@ -1,68 +1,72 @@
 import { useEffect, useState } from 'react';
+import { View } from 'react-native';
+import Animated, { FadeIn, FadeOut, LinearTransition } from 'react-native-reanimated';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { rupees, type Cart, type Fulfillment, type PaymentMode, type Quote, type StorePage } from '@busyfrnd/shared';
-import { Btn, Card, Err, Field, Loading, Row, Screen, T, openCheckout, useApp } from '@busyfrnd/mobile-core';
+import { rupees, type Fulfillment, type PaymentMode, type Quote, type StorePage } from '@busyfrnd/shared';
+import { Btn, Card, EmptyState, Field, Icon, ProductThumb, Row, Screen, Segmented, Skeleton, T, Tap, colors, haptic, openCheckout, useApp, useToast } from '@busyfrnd/mobile-core';
+import { useCart } from '../../lib/cart';
 
 export default function Checkout() {
   const { storeId } = useLocalSearchParams<{ storeId: string }>();
   const { api, t } = useApp();
+  const toast = useToast();
   const router = useRouter();
+  const { cartFor, loaded, refresh } = useCart();
+  const cart = cartFor(storeId);
   const [store, setStore] = useState<StorePage | null>(null);
-  const [cart, setCart] = useState<Cart | null | undefined>(undefined);
   const [f, setF] = useState<Fulfillment>('PICKUP');
   const [mode, setMode] = useState<PaymentMode>('FULL');
   const [address, setAddress] = useState('');
   const [quote, setQuote] = useState<Quote | null>(null);
-  const [err, setErr] = useState('');
   const [busy, setBusy] = useState(false);
 
-  useEffect(() => {
-    api.catalog.store(storeId).then((s) => { setStore(s); setF(s.policy.offersPickup ? 'PICKUP' : 'DELIVERY'); }).catch((e) => setErr(e.message));
-    api.cart.list().then((cs) => setCart(cs.find((c) => c.storeId === storeId) ?? null));
-  }, [api, storeId]);
-  useEffect(() => { if (cart) api.cart.quote({ storeId, fulfillment: f, paymentMode: mode }).then((q) => { setQuote(q); setErr(''); }).catch((e) => setErr(e.message)); }, [api, storeId, f, mode, cart]);
+  useEffect(() => { api.catalog.store(storeId).then((s) => { setStore(s); setF(s.policy.offersPickup ? 'PICKUP' : 'DELIVERY'); }).catch((e) => toast.show(e.message, 'error')); }, [api, storeId, toast]);
+  useEffect(() => { if (cart) api.cart.quote({ storeId, fulfillment: f, paymentMode: mode }).then(setQuote).catch((e) => toast.show(e.message, 'error')); }, [api, storeId, f, mode, cart, toast]);
 
-  if (cart === undefined || !store) return <Screen><Err msg={err} />{!err && <Loading />}</Screen>;
-  if (!cart) return <Screen><T muted>{t('cart.empty')}</T></Screen>;
+  if (!loaded || !store) return <Screen><Skeleton style={{ height: 200, borderRadius: 24 }} /></Screen>;
+  if (!cart) return <Screen><EmptyState emoji="🛒" title={t('cart.empty')} /></Screen>;
 
   const pay = async () => {
-    setBusy(true); setErr('');
+    setBusy(true);
     try {
       const returnUrl = 'busyfrnd-customer://pay-result';
       const r = await api.cart.checkout({ storeId, fulfillment: f, paymentMode: mode, address: address || undefined, next: returnUrl });
       await openCheckout(r.checkoutUrl, returnUrl);
-      router.replace(`/order/${r.orderId}`);
-    } catch (e) { setErr((e as Error).message); } finally { setBusy(false); }
+      refresh(); haptic.success(); router.replace(`/order/${r.orderId}`);
+    } catch (e) { toast.show((e as Error).message, 'error'); } finally { setBusy(false); }
   };
+  const payOptions: Array<[PaymentMode, string, string]> = [['FULL', t('cart.fullPay'), 'Pay the full amount now'], ...(store.policy.partialPaymentEnabled ? [['PARTIAL', t('cart.partPay'), `Pay ${store.policy.partialPercent}% now, rest at the store`] as [PaymentMode, string, string]] : [])];
 
   return (
-    <Screen>
+    <Screen bottomInset={30} footer={
+      <View style={{ padding: 16, paddingBottom: 28, backgroundColor: '#fff', borderTopWidth: 0.5, borderTopColor: colors.line }}>
+        <Btn full size="lg" title={`${t('cart.payNow')} ${quote ? rupees(quote.payNow) : ''}`} loading={busy} disabled={!quote || (f === 'DELIVERY' && !address.trim())} onPress={pay} />
+        <T small muted center style={{ marginTop: 8 }}>🔒 Secure payment by Cashfree</T>
+      </View>}>
       <Stack.Screen options={{ title: store.name }} />
-      <Card>{cart.lines.map((l) => <Row key={l.itemId} style={{ justifyContent: 'space-between' }}><T>{l.qty} × {l.name}</T><T>{rupees(l.qty * l.pricePaise)}</T></Row>)}</Card>
       <Card>
-        <T bold>Pickup or delivery?</T>
-        <Row>
-          {store.policy.offersPickup && <Btn kind={f === 'PICKUP' ? 'primary' : 'secondary'} title={`🏪 ${t('cart.pickup')} · free`} onPress={() => setF('PICKUP')} />}
-          {store.policy.offersDelivery && <Btn kind={f === 'DELIVERY' ? 'primary' : 'secondary'} title={`🛵 ${t('cart.delivery')}`} onPress={() => setF('DELIVERY')} />}
-        </Row>
-        {f === 'DELIVERY' && <Field label="Delivery address" value={address} onChangeText={setAddress} multiline />}
+        <T variant="headline">How do you want it?</T>
+        <Segmented value={f} onChange={setF} options={[{ value: 'PICKUP', label: t('cart.pickup'), icon: 'storefront', disabled: !store.policy.offersPickup }, { value: 'DELIVERY', label: t('cart.delivery'), icon: 'bicycle', disabled: !store.policy.offersDelivery }]} />
+        {f === 'PICKUP' ? <Animated.View entering={FadeIn} exiting={FadeOut} style={{ backgroundColor: '#E6F6EC', padding: 12, borderRadius: 16 }}><T bold color="#0B6B3A">🎉 No delivery fee — we’ll notify you when it’s ready.</T></Animated.View>
+          : <Animated.View entering={FadeIn} exiting={FadeOut}><Field label="Delivery address" value={address} onChangeText={setAddress} multiline placeholder="House no, street, landmark" /></Animated.View>}
       </Card>
       <Card>
-        <T bold>Payment</T>
-        <Row>
-          <Btn kind={mode === 'FULL' ? 'primary' : 'secondary'} title={t('cart.fullPay')} onPress={() => setMode('FULL')} />
-          {store.policy.partialPaymentEnabled && <Btn kind={mode === 'PARTIAL' ? 'primary' : 'secondary'} title={`${t('cart.partPay')} (${store.policy.partialPercent}%)`} onPress={() => setMode('PARTIAL')} />}
-        </Row>
+        <T variant="headline">Payment</T>
+        {payOptions.map(([v, label, hint]) => (
+          <Tap key={v} onPress={() => setMode(v)} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, borderRadius: 18, borderWidth: 2, borderColor: mode === v ? colors.text : colors.line, backgroundColor: mode === v ? '#F7F7F8' : '#fff' }}>
+            <View style={{ width: 24, height: 24, borderRadius: 12, borderWidth: 2, borderColor: mode === v ? colors.text : colors.line, backgroundColor: mode === v ? colors.text : '#fff', alignItems: 'center', justifyContent: 'center' }}>{mode === v && <Icon name="checkmark" size={14} color="#fff" />}</View>
+            <View style={{ flex: 1 }}><T variant="label">{label}</T><T small muted>{hint}</T></View>
+          </Tap>))}
       </Card>
-      {quote && (
-        <Card>
-          {quote.lines.map((l) => <Row key={l.key} style={{ justifyContent: 'space-between' }}><T>{t('fee.' + l.key)}</T><T>{rupees(l.amount)}</T></Row>)}
-          <Row style={{ justifyContent: 'space-between' }}><T bold>{t('cart.total')}</T><T bold>{rupees(quote.total)}</T></Row>
-          <Row style={{ justifyContent: 'space-between' }}><T>{t('cart.payNow')}</T><T bold color="#2E7D32">{rupees(quote.payNow)}</T></Row>
-          {quote.payLater > 0 && <Row style={{ justifyContent: 'space-between' }}><T muted>{t('cart.payLater')}</T><T muted>{rupees(quote.payLater)}</T></Row>}
-        </Card>)}
-      <Err msg={err} />
-      <Btn title={`${t('cart.payNow')} ${quote ? rupees(quote.payNow) : ''}`} loading={busy} disabled={!quote || (f === 'DELIVERY' && !address.trim())} onPress={pay} />
+      <Card>
+        <T variant="headline">Order summary</T>
+        {cart.lines.map((l) => <Row key={l.itemId} style={{ flexWrap: 'nowrap' }}><ProductThumb id={l.itemId} name={l.name} kind={l.kind} size={40} radius={12} /><T variant="label" numberOfLines={1} style={{ flex: 1 }}>{l.qty} × {l.name}</T><T variant="label">{rupees(l.qty * l.pricePaise)}</T></Row>)}
+        {quote && <Animated.View layout={LinearTransition} style={{ gap: 8, paddingTop: 10, borderTopWidth: 0.5, borderTopColor: colors.line }}>
+          {quote.lines.map((l) => <Row key={l.key} style={{ justifyContent: 'space-between', flexWrap: 'nowrap' }}><T muted>{t('fee.' + l.key)}</T><T bold>{rupees(l.amount)}</T></Row>)}
+          <Row style={{ justifyContent: 'space-between', flexWrap: 'nowrap' }}><T variant="headline">{t('cart.total')}</T><T variant="headline">{rupees(quote.total)}</T></Row>
+          {quote.payLater > 0 && <Row style={{ justifyContent: 'space-between', flexWrap: 'nowrap', backgroundColor: '#F7F7F8', padding: 12, borderRadius: 14 }}><T muted>{t('cart.payLater')}</T><T bold>{rupees(quote.payLater)}</T></Row>}
+        </Animated.View>}
+      </Card>
     </Screen>
   );
 }

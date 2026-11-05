@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
-import * as SecureStore from 'expo-secure-store';
+import { kv } from './kv';
 import { createApi, type Api } from '@busyfrnd/api-client';
 import { makeT, type Language, type SessionUser } from '@busyfrnd/shared';
 
@@ -10,11 +10,7 @@ interface Ctx {
 }
 const C = createContext<Ctx | null>(null);
 
-const store = {
-  get: async (k: string) => { try { return await SecureStore.getItemAsync(k); } catch { return null; } },
-  set: async (k: string, v: string) => { try { await SecureStore.setItemAsync(k, v); } catch { /* ignore */ } },
-  del: async (k: string) => { try { await SecureStore.deleteItemAsync(k); } catch { /* ignore */ } },
-};
+const store = kv;
 
 export function AppProvider({ storageKey, apiUrl: defaultApiUrl, children }: { storageKey: string; apiUrl: string; children: ReactNode }) {
   const [apiUrl, setApiUrlState] = useState(defaultApiUrl);

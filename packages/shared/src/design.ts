@@ -40,7 +40,7 @@ const KEYWORD_EMOJI: Array<[RegExp, string]> = [
   [/cake|pastry|brownie/i, '🎂'], [/bread|bun|loaf/i, '🍞'], [/biscuit|cookie/i, '🍪'], [/rice|biryani|pulao/i, '🍚'], [/dal|dhal|lentil|toor/i, '🫘'],
   [/oil|ghee/i, '🛢️'], [/tea|chai/i, '🍵'], [/coffee/i, '☕'], [/milk|curd|paneer|butter/i, '🥛'], [/egg/i, '🥚'], [/fruit|apple|banana|mango/i, '🍎'],
   [/vegetable|tomato|onion|potato/i, '🥦'], [/chicken|mutton|meat|fish/i, '🍗'], [/dosa|idli|vada|sambar/i, '🥞'], [/pizza|burger|sandwich/i, '🍔'],
-  [/phone|mobile|iphone|android/i, '📱'], [/cover|case/i, '📲'], [/glass|screen guard|tempered/i, '🛡️'], [/charger|cable|adapter|adaptor/i, '🔌'], [/earphone|headphone|earbud/i, '🎧'],
+  [/earphone|headphone|earbud|speaker/i, '🎧'], [/cover|case/i, '📲'], [/glass|screen guard|tempered/i, '🛡️'], [/charger|cable|adapter|adaptor/i, '🔌'], [/phone|mobile|iphone|android/i, '📱'],
   [/battery|power bank/i, '🔋'], [/screen|display|replace|repair/i, '🔧'], [/haircut|hair|trim/i, '💇'], [/beard|shave/i, '🧔'], [/facial|massage|spa/i, '💆'],
   [/shirt|t-?shirt|saree|dress|kurta|jeans/i, '👕'], [/shoe|sandal|chappal/i, '👟'], [/medicine|tablet|syrup|paracetamol/i, '💊'], [/book|notebook|copy/i, '📚'],
   [/pen|pencil/i, '✏️'], [/soap|shampoo|detergent|powder/i, '🧴'], [/paint|brush/i, '🎨'], [/pipe|tap|bulb|wire/i, '💡'],

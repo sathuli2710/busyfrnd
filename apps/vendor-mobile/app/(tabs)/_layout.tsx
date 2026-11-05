@@ -1,17 +1,14 @@
-import { Text } from 'react-native';
 import { Tabs } from 'expo-router';
-import { useApp } from '@busyfrnd/mobile-core';
-
-const icon = (e: string) => () => <Text style={{ fontSize: 20 }}>{e}</Text>;
+import { Icon, TabBar, useApp } from '@busyfrnd/mobile-core';
 
 export default function TabsLayout() {
   const { t } = useApp();
   return (
-    <Tabs screenOptions={{ tabBarActiveTintColor: '#F57C00' }}>
-      <Tabs.Screen name="index" options={{ title: t('nav.dashboard'), tabBarIcon: icon('📊'), headerShown: false }} />
-      <Tabs.Screen name="orders" options={{ title: t('nav.orders'), tabBarIcon: icon('📦') }} />
-      <Tabs.Screen name="assistant" options={{ title: t('nav.assistant'), tabBarIcon: icon('🎙️') }} />
-      <Tabs.Screen name="account" options={{ title: t('nav.plans'), tabBarIcon: icon('👤') }} />
+    <Tabs tabBar={(p) => <TabBar {...(p as unknown as Parameters<typeof TabBar>[0])} />} screenOptions={{ headerShown: false }}>
+      <Tabs.Screen name="index" options={{ title: t('nav.dashboard'), tabBarIcon: ({ color, focused }) => <Icon name={focused ? 'grid' : 'grid-outline'} size={24} color={color} /> }} />
+      <Tabs.Screen name="orders" options={{ title: t('nav.orders'), tabBarIcon: ({ color, focused }) => <Icon name={focused ? 'receipt' : 'receipt-outline'} size={24} color={color} /> }} />
+      <Tabs.Screen name="assistant" options={{ title: 'AI Buddy', tabBarIcon: ({ color, focused }) => <Icon name={focused ? 'sparkles' : 'sparkles-outline'} size={24} color={color} /> }} />
+      <Tabs.Screen name="account" options={{ title: t('nav.plans'), tabBarIcon: ({ color, focused }) => <Icon name={focused ? 'person-circle' : 'person-circle-outline'} size={26} color={color} /> }} />
     </Tabs>
   );
 }

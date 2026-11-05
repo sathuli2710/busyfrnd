@@ -3,7 +3,9 @@ import { Redirect, Stack, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import Constants from 'expo-constants';
 import * as Notifications from 'expo-notifications';
-import { AppProvider, Loading, useApp } from '@busyfrnd/mobile-core';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { AppProvider, Loading, ToastProvider, useApp } from '@busyfrnd/mobile-core';
+import { CartProvider } from '../lib/cart';
 
 export const API_URL: string = process.env.EXPO_PUBLIC_API_URL ?? (Constants.expoConfig?.extra?.apiUrl as string) ?? 'http://10.0.2.2:4000';
 
@@ -27,21 +29,27 @@ function Gate() {
   if (!ready) return <Loading />;
   if (!user && seg[0] !== 'login') return <Redirect href="/login" />;
   return (
-    <Stack screenOptions={{ headerTintColor: '#F57C00' }}>
+    <Stack screenOptions={{ headerTintColor: '#0B0B0F', headerShadowVisible: false, headerStyle: { backgroundColor: '#F7F7F8' }, headerTitleStyle: { fontWeight: '800' }, animation: 'slide_from_right', contentStyle: { backgroundColor: '#F7F7F8' } }}>
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-      <Stack.Screen name="login" options={{ headerShown: false }} />
-      <Stack.Screen name="store/[id]" options={{ title: 'Store' }} />
-      <Stack.Screen name="checkout/[storeId]" options={{ title: 'Checkout' }} />
-      <Stack.Screen name="order/[id]" options={{ title: 'Order' }} />
+      <Stack.Screen name="login" options={{ headerShown: false, animation: 'fade' }} />
+      <Stack.Screen name="store/[id]" options={{ headerShown: false }} />
+      <Stack.Screen name="checkout/[storeId]" options={{ title: 'Checkout', headerBackTitle: 'Back' }} />
+      <Stack.Screen name="order/[id]" options={{ title: 'Order', headerBackTitle: 'Back' }} />
     </Stack>
   );
 }
 
 export default function Root() {
   return (
-    <AppProvider storageKey="bf.customer" apiUrl={API_URL}>
-      <StatusBar style="dark" />
-      <Gate />
-    </AppProvider>
+    <SafeAreaProvider>
+      <AppProvider storageKey="bf.customer" apiUrl={API_URL}>
+        <ToastProvider>
+          <CartProvider>
+            <StatusBar style="dark" />
+            <Gate />
+          </CartProvider>
+        </ToastProvider>
+      </AppProvider>
+    </SafeAreaProvider>
   );
 }

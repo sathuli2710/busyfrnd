@@ -13,3 +13,4 @@ ios/
 coverage
 .turbo
 dist
+dist-web
