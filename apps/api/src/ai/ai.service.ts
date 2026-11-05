@@ -1,6 +1,6 @@
 import { ForbiddenException, Injectable, Logger } from '@nestjs/common';
 import Anthropic from '@anthropic-ai/sdk';
-import { PLANS, STORE_CATEGORIES, suggestTemplates, type Language } from '@busyfrnd/shared';
+import { PLANS, STORE_CATEGORIES, boundingBox, haversineKm, suggestTemplates, type Language } from '@busyfrnd/shared';
 import { PrismaService } from '../common/prisma.service';
 import { PlanService, effectivePlan } from '../common/plan.service';
 
@@ -92,6 +92,35 @@ export class AiService {
       name: nameMatch?.[1].trim() ?? t.split(/[,.\n]/)[0].trim().slice(0, 60), category, description: t.slice(0, 200),
       offersPickup: true, offersDelivery: /deliver|டெலிவரி|डिलीवरी/i.test(lower), items, templateIds: [], reply: reply[lang],
     };
+  }
+
+  /** Customer natural-language search: "birthday cake under 500" → keywords + price cap → nearby items. */
+  async shop(text: string, near: { lat: number; lng: number; radius: number }, language: Language) {
+    let keywords: string[] = []; let maxPrice: number | null = null; let reply = '';
+    if (this.client) {
+      try {
+        const { text: out } = await this.ask(
+          `You turn a shopper's request (English/Hindi/Tamil/mixed) into a search over local shops. Reply ONLY minified JSON: {"keywords":string[] (1-4 short ENGLISH singular nouns/terms that would appear in item names, include synonyms),"maxPriceRupees":number|null,"reply":string (one friendly sentence in ${LANG_NAME[language]} saying what you're looking for)}.`, text, 300);
+        const j = JSON.parse(out.slice(out.indexOf('{'), out.lastIndexOf('}') + 1));
+        keywords = (j.keywords ?? []).map((k: unknown) => String(k).toLowerCase()).filter(Boolean).slice(0, 5);
+        maxPrice = j.maxPriceRupees != null ? +j.maxPriceRupees : null; reply = String(j.reply ?? '');
+      } catch (e) { this.log.warn(`AI shop failed, using fallback: ${e}`); }
+    }
+    if (!keywords.length) {
+      const m = text.match(/(?:under|below|less than|within|upto|up to|₹|rs\.?)\s*(\d{2,6})/i);
+      maxPrice = maxPrice ?? (m ? +m[1] : null);
+      const stop = new Set(['under', 'below', 'less', 'than', 'within', 'upto', 'near', 'me', 'for', 'the', 'a', 'an', 'in', 'my', 'need', 'want', 'get', 'find', 'buy', 'rs', 'rupees', 'and', 'with', 'of', 'to', 'i']);
+      keywords = text.toLowerCase().replace(/[₹\d.,]/g, ' ').split(/\s+/).filter((w) => w.length > 2 && !stop.has(w)).slice(0, 4);
+    }
+    const bb = boundingBox(near, near.radius);
+    const stores = await this.prisma.store.findMany({ where: { status: 'PUBLISHED', publishApp: true, lat: { gte: bb.minLat, lte: bb.maxLat }, lng: { gte: bb.minLng, lte: bb.maxLng } } });
+    const inRange = new Map(stores.map((s) => [s.id, { s, d: haversineKm(near, s) }]).filter(([, v]) => (v as { d: number }).d <= near.radius) as Array<[string, { s: (typeof stores)[number]; d: number }]>);
+    const items = keywords.length ? await this.prisma.item.findMany({
+      where: { storeId: { in: [...inRange.keys()] }, archived: false, inStock: true, OR: keywords.map((k) => ({ OR: [{ name: { contains: k, mode: 'insensitive' as const } }, { description: { contains: k, mode: 'insensitive' as const } }, { category: { contains: k, mode: 'insensitive' as const } }] })), ...(maxPrice ? { pricePaise: { lte: maxPrice * 100 } } : {}) },
+      take: 24,
+    }) : [];
+    const out = items.map((i) => ({ id: i.id, storeId: i.storeId, name: i.name, kind: i.kind, pricePaise: i.pricePaise, storeName: inRange.get(i.storeId)!.s.name, distanceKm: Math.round(inRange.get(i.storeId)!.d * 10) / 10 })).sort((a, b) => a.distanceKm - b.distanceKm);
+    return { reply: reply || (out.length ? `Here's what I found for "${keywords.join(', ')}"${maxPrice ? ` under ₹${maxPrice}` : ''}.` : `I couldn't find "${keywords.join(', ') || text}" nearby yet.`), keywords, maxPrice, items: out, live: !!this.client };
   }
 
   /** Business assistant: answers questions about the vendor's own sales, in their language. */

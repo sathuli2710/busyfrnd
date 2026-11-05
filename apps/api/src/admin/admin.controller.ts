@@ -25,7 +25,14 @@ export class AdminController {
       this.prisma.order.aggregate({ where: { status: { notIn: ['PENDING_PAYMENT', 'CANCELLED'] } }, _sum: { total: true } }),
     ]);
     const subs = await this.prisma.subscriptionPayment.aggregate({ where: { status: 'PAID' }, _sum: { amount: true } });
-    return { customers, vendors, stores, inReview, published, orders, gmvPaise: gmv._sum.total ?? 0, subscriptionRevenuePaise: subs._sum.amount ?? 0 };
+    const since = new Date(Date.now() - 13 * 86_400_000); since.setHours(0, 0, 0, 0);
+    const recent = await this.prisma.order.findMany({ where: { createdAt: { gte: since }, status: { notIn: ['PENDING_PAYMENT', 'CANCELLED'] } }, select: { total: true, createdAt: true } });
+    const series = Array.from({ length: 14 }, (_, i) => {
+      const d = new Date(since.getTime() + i * 86_400_000), key = d.toDateString();
+      const day = recent.filter((o) => o.createdAt.toDateString() === key);
+      return { date: d.toISOString().slice(0, 10), orders: day.length, gmvPaise: day.reduce((n, o) => n + o.total, 0) };
+    });
+    return { customers, vendors, stores, inReview, published, orders, gmvPaise: gmv._sum.total ?? 0, subscriptionRevenuePaise: subs._sum.amount ?? 0, series };
   }
 
   @Get('stores')

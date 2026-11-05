@@ -28,7 +28,9 @@ export interface VendorStore {
 export interface Dashboard {
   revenueToday: number; ordersToday: number; revenueLast7Days: number; ordersLast7Days: number; pendingOrders: number;
   topItemsToday: Array<{ name: string; qty: number }>; series: Array<{ date: string; revenue: number; orders: number }>; subscription: Subscription;
+  insights: Array<{ key: string; params?: Record<string, string | number> }>;
 }
+export interface ShopAnswer { reply: string; keywords: string[]; maxPrice: number | null; live: boolean; items: Array<{ id: string; storeId: string; name: string; kind: 'PRODUCT' | 'SERVICE'; pricePaise: number; storeName: string; distanceKm: number }> }
 export type VendorStorePage = StorePage & { status: string; rejectionReason: string | null; publishWeb: boolean; publishApp: boolean; wantWeb: boolean; wantApp: boolean };
 export interface AppNotification { id: string; title: string; body: string; createdAt: string; readAt: string | null; data?: { orderId?: string } }
 
@@ -107,10 +109,11 @@ export function createApi(opts: ClientOptions) {
     },
     ai: {
       onboarding: (text: string, language: Language) => call<OnboardingDraft>('POST', '/ai/onboarding', { text, language }),
+      shop: (b: { text: string; lat: number; lng: number; radius?: number; language: Language }) => call<ShopAnswer>('POST', '/ai/shop', b),
       assistant: (text: string, language: Language) => call<{ reply: string; live: boolean }>('POST', '/ai/assistant', { text, language }),
     },
     admin: {
-      stats: () => get<{ customers: number; vendors: number; stores: number; inReview: number; published: number; orders: number; gmvPaise: number; subscriptionRevenuePaise: number }>('/admin/stats'),
+      stats: () => get<{ customers: number; vendors: number; stores: number; inReview: number; published: number; orders: number; gmvPaise: number; subscriptionRevenuePaise: number; series: Array<{ date: string; orders: number; gmvPaise: number }> }>('/admin/stats'),
       stores: (status?: string) => get<any[]>('/admin/stores' + (status ? `?status=${status}` : '')),
       store: (id: string) => get<{ page: StorePage; status: string; wantWeb: boolean; wantApp: boolean; rejectionReason: string | null; reviews: any[]; vendor: { phone: string; email: string; name: string | null; plan: PlanId } }>(`/admin/stores/${id}`),
       review: (id: string, decision: 'APPROVE' | 'REJECT' | 'SUSPEND' | 'REINSTATE', notes?: string) => call<{ id: string; status: string }>('POST', `/admin/stores/${id}/review`, { decision, notes }),

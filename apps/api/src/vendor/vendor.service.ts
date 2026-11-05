@@ -161,7 +161,21 @@ export class VendorService {
       const day = orders.filter((o) => o.createdAt.toDateString() === key);
       return { date: d.toISOString().slice(0, 10), revenue: Math.round(day.reduce((s, o) => s + o.total, 0) / 100), orders: day.length };
     });
-    return { ...facts, series, subscription: this.plans.subscription(v) };
+    const sub = this.plans.subscription(v);
+    const itemCount = await this.prisma.item.count({ where: { store: { vendorId: v.id }, archived: false } });
+    // Deterministic "smart insights" (no AI tokens spent). The client localises the keys.
+    const insights: Array<{ key: string; params?: Record<string, string | number> }> = [];
+    const today = series[6].revenue, yday = series[5].revenue;
+    if (!itemCount) insights.push({ key: 'insight.none' });
+    if (yday > 0 && today > 0) {
+      const pct = Math.round(((today - yday) / yday) * 100);
+      if (pct >= 10) insights.push({ key: 'insight.up', params: { n: pct } });
+      else if (pct <= -10) insights.push({ key: 'insight.down', params: { n: Math.abs(pct) } });
+    }
+    if (facts.pendingOrders > 0) insights.push({ key: 'insight.pending', params: { n: facts.pendingOrders } });
+    if (facts.topItemsToday[0]) insights.push({ key: 'insight.top', params: { name: facts.topItemsToday[0].name } });
+    if (sub.plan === 'TRIAL' && sub.daysLeft != null && sub.daysLeft <= 14) insights.push({ key: 'insight.trial', params: { n: sub.daysLeft } });
+    return { ...facts, series, subscription: sub, insights };
   }
 
   // ---------- plans ----------

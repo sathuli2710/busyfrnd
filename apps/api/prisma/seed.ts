@@ -28,25 +28,35 @@ async function main() {
 
   if ((await prisma.store.count({ where: { vendorId: vendor.id } })) > 0) return console.log('Seed: demo stores already exist');
 
-  const stores = [
+  type Row = [string, number, 'PRODUCT' | 'SERVICE', string?];
+  const stores: Array<{ name: string; nameLocal?: string; category: string; templateId: string; dLat: number; dLng: number; village: string; offersDelivery: boolean; deliveryFee?: number; lowOrderThreshold?: number; lowOrderDeliveryFee?: number; freeDeliveryAbove?: number; visitingFee?: number; partialPaymentEnabled?: boolean; status?: 'PUBLISHED' | 'IN_REVIEW'; items: Row[] }> = [
     { name: 'Murugan Mobiles', nameLocal: 'முருகன் மொபைல்ஸ்', category: 'mobile', templateId: 'catalog-saffron', dLat: 0.01, dLng: 0.01, village: 'Ambattur', offersDelivery: true, deliveryFee: 3000, lowOrderThreshold: 19900, lowOrderDeliveryFee: 5000,
-      items: [['Phone cover', 199, 'PRODUCT'], ['Tempered glass', 149, 'PRODUCT'], ['Fast charger 25W', 599, 'PRODUCT'], ['Screen replacement', 1800, 'SERVICE']] },
+      items: [['Phone cover', 199, 'PRODUCT', 'Accessories'], ['Tempered glass', 149, 'PRODUCT', 'Accessories'], ['Fast charger 25W', 599, 'PRODUCT', 'Chargers'], ['Earphones', 349, 'PRODUCT', 'Audio'], ['Screen replacement', 1800, 'SERVICE', 'Repairs'], ['Battery replacement', 900, 'SERVICE', 'Repairs']] },
     { name: 'Annapoorna Provisions', nameLocal: 'அன்னபூர்ணா மளிகை', category: 'grocery', templateId: 'classic-forest', dLat: -0.02, dLng: 0.005, village: 'Anna Nagar', offersDelivery: true, deliveryFee: 2000, freeDeliveryAbove: 99900,
-      items: [['Rice 5kg', 340, 'PRODUCT'], ['Toor dal 1kg', 160, 'PRODUCT'], ['Sunflower oil 1L', 150, 'PRODUCT'], ['Tea powder 250g', 120, 'PRODUCT']] },
+      items: [['Rice 5kg', 340, 'PRODUCT', 'Staples'], ['Toor dal 1kg', 160, 'PRODUCT', 'Staples'], ['Sunflower oil 1L', 150, 'PRODUCT', 'Staples'], ['Tea powder 250g', 120, 'PRODUCT', 'Beverages'], ['Milk 1L', 28, 'PRODUCT', 'Dairy'], ['Eggs (12)', 84, 'PRODUCT', 'Dairy']] },
     { name: 'Raj Hair Studio', category: 'salon', templateId: 'service-berry', dLat: 0.03, dLng: -0.02, village: 'Villivakkam', offersDelivery: false, visitingFee: 5000, partialPaymentEnabled: true,
-      items: [['Haircut', 150, 'SERVICE'], ['Beard trim', 80, 'SERVICE'], ['Facial', 500, 'SERVICE']] },
+      items: [['Haircut', 150, 'SERVICE'], ['Beard trim', 80, 'SERVICE'], ['Facial', 500, 'SERVICE'], ['Hair spa', 700, 'SERVICE']] },
+    { name: 'Kumar Bakery', nameLocal: 'குமார் பேக்கரி', category: 'bakery', templateId: 'showcase-rose', dLat: 0.008, dLng: -0.012, village: 'Kilpauk', offersDelivery: true, deliveryFee: 3000, freeDeliveryAbove: 79900,
+      items: [['Chocolate cake', 450, 'PRODUCT', 'Cakes'], ['Black forest cake', 520, 'PRODUCT', 'Cakes'], ['Fresh bread', 40, 'PRODUCT', 'Bread'], ['Veg puff', 25, 'PRODUCT', 'Snacks'], ['Butter cookies', 120, 'PRODUCT', 'Snacks']] },
+    { name: 'Spice Garden', category: 'restaurant', templateId: 'menu-ocean', dLat: -0.012, dLng: -0.018, village: 'Perambur', offersDelivery: true, deliveryFee: 3500, lowOrderThreshold: 29900, lowOrderDeliveryFee: 5000,
+      items: [['Chicken biryani', 220, 'PRODUCT', 'Mains'], ['Veg meals', 120, 'PRODUCT', 'Mains'], ['Parotta (2)', 30, 'PRODUCT', 'Breads'], ['Filter coffee', 30, 'PRODUCT', 'Drinks'], ['Gulab jamun', 60, 'PRODUCT', 'Desserts']] },
+    { name: 'HealthPlus Pharmacy', category: 'pharmacy', templateId: 'classic-ocean', dLat: 0.02, dLng: 0.02, village: 'Anna Nagar West', offersDelivery: true, deliveryFee: 2500,
+      items: [['Paracetamol strip', 30, 'PRODUCT', 'Medicines'], ['Cough syrup', 95, 'PRODUCT', 'Medicines'], ['Vitamin C tablets', 140, 'PRODUCT', 'Wellness'], ['Hand sanitizer', 60, 'PRODUCT', 'Care']] },
+    { name: 'Sri Sai Stationery', category: 'stationery', templateId: 'catalog-slate', dLat: 0.005, dLng: 0.025, village: 'Mogappair', offersDelivery: false, status: 'IN_REVIEW',
+      items: [['Notebook (200 pg)', 60, 'PRODUCT', 'Books'], ['Ball pens (10)', 50, 'PRODUCT', 'Pens'], ['Geometry box', 120, 'PRODUCT', 'School']] },
   ];
   for (const s of stores) {
+    const live = (s.status ?? 'PUBLISHED') === 'PUBLISHED';
     const store = await prisma.store.create({
       data: {
         vendorId: vendor.id, name: s.name, nameLocal: s.nameLocal, category: s.category, templateId: s.templateId, village: s.village,
         description: `Welcome to ${s.name} — your friendly neighbourhood shop.`, hours: '9:00 AM – 9:00 PM', phone: '+919999900001', address: `${s.village}, Chennai`,
-        lat: CENTER.lat + s.dLat, lng: CENTER.lng + s.dLng, status: 'PUBLISHED', publishWeb: true, publishApp: true, publishedAt: new Date(),
+        lat: CENTER.lat + s.dLat, lng: CENTER.lng + s.dLng, status: live ? 'PUBLISHED' : 'IN_REVIEW', publishWeb: live, publishApp: live, publishedAt: live ? new Date() : null, submittedAt: live ? null : new Date(),
         offersPickup: true, offersDelivery: s.offersDelivery, deliveryFee: s.deliveryFee ?? 0, lowOrderThreshold: s.lowOrderThreshold, lowOrderDeliveryFee: s.lowOrderDeliveryFee,
         freeDeliveryAbove: s.freeDeliveryAbove, platformFee: 500, handlingFee: s.category === 'grocery' ? 1000 : 0, visitingFee: s.visitingFee ?? 0, partialPaymentEnabled: !!s.partialPaymentEnabled,
       },
     });
-    await prisma.item.createMany({ data: s.items.map(([name, price, kind]) => ({ storeId: store.id, name: name as string, pricePaise: (price as number) * 100, kind: kind as 'PRODUCT' | 'SERVICE' })) });
+    await prisma.item.createMany({ data: s.items.map(([name, price, kind, category]) => ({ storeId: store.id, name, pricePaise: price * 100, kind, category: category ?? null })) });
   }
   console.log('Seed complete. Admin:', email, '| demo vendor +919999900001 | demo customer +919999900002 | OTP 123456');
 }

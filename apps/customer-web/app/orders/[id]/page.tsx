@@ -1,7 +1,8 @@
 'use client';
 import { use, useEffect, useState } from 'react';
+import { MapPin } from 'lucide-react';
 import { rupees, type OrderDto } from '@busyfrnd/shared';
-import { STATUS_COLOR, fmtDate, shortId, useApp } from '@busyfrnd/web-ui';
+import { Badge, Button, Card, OrderTimeline, ProductThumb, STATUS_LABEL, STATUS_TONE, Skeleton, fmtDate, shortId, useApp } from '@busyfrnd/web-ui';
 
 export default function OrderDetail({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -12,19 +13,23 @@ export default function OrderDetail({ params }: { params: Promise<{ id: string }
     const load = () => api.orders.get(id).then(setO).catch(() => undefined);
     load(); const i = setInterval(load, 8000); return () => clearInterval(i);
   }, [api, user, id]);
-  if (!o) return <div className="muted">{t('common.loading')}</div>;
+  if (!o) return <div className="mx-auto max-w-xl space-y-4"><Skeleton className="h-40" /><Skeleton className="h-64" /></div>;
   return (
-    <div className="card col" style={{ maxWidth: 560, margin: '0 auto' }}>
-      <div className="row" style={{ justifyContent: 'space-between' }}><h2 style={{ margin: 0 }}>{o.storeName} {shortId(o.id)}</h2><span className={`badge ${STATUS_COLOR[o.status]}`}>{o.status.replace(/_/g, ' ')}</span></div>
-      <div className="muted small">{fmtDate(o.createdAt)} · {o.fulfillment === 'PICKUP' ? t('cart.pickup') : t('cart.delivery')}</div>
-      {o.status === 'READY' && o.fulfillment === 'PICKUP' && <div className="card ok"><b>✅ {t('order.ready')}</b></div>}
-      {o.status === 'PENDING_PAYMENT' && <button className="btn" onClick={async () => { const r = await api.orders.pay(o.id, location.href); location.href = r.checkoutUrl; }}>{t('cart.payNow')}</button>}
-      {o.lines.map((l) => <div key={l.itemId} className="row" style={{ justifyContent: 'space-between' }}><span>{l.qty} × {l.name}</span><span>{rupees(l.qty * l.pricePaise)}</span></div>)}
-      {o.fees.filter((f) => f.key !== 'subtotal').map((f) => <div key={f.key} className="row muted small" style={{ justifyContent: 'space-between' }}><span>{t('fee.' + f.key)}</span><span>{rupees(f.amount)}</span></div>)}
-      <div className="row price" style={{ justifyContent: 'space-between' }}><span>{t('cart.total')}</span><span>{rupees(o.total)}</span></div>
-      <div className="row small" style={{ justifyContent: 'space-between' }}><span>Paid</span><span>{rupees(o.paid)}</span></div>
-      {o.due > 0 && <div className="row small" style={{ justifyContent: 'space-between' }}><span>{t('cart.payLater')}</span><b>{rupees(o.due)}</b></div>}
-      {o.deliveryAddress && <div className="small">📍 {o.deliveryAddress}</div>}
+    <div className="mx-auto flex max-w-xl flex-col gap-5">
+      <div className="flex items-start justify-between gap-3"><div><p className="text-sm font-semibold text-muted">{shortId(o.id)} · {fmtDate(o.createdAt)}</p><h1 className="text-3xl font-black tracking-tight">{o.storeName}</h1></div><Badge tone={STATUS_TONE[o.status]}>{STATUS_LABEL[o.status]}</Badge></div>
+      {o.status === 'READY' && o.fulfillment === 'PICKUP' && <div className="rounded-3xl bg-emerald-50 p-5 text-emerald-800"><div className="text-xl font-black">✅ {t('order.ready')}</div><div className="text-sm">Show order {shortId(o.id)} at the counter.</div></div>}
+      {o.status === 'PENDING_PAYMENT' && <Card className="flex items-center justify-between gap-3"><span className="font-semibold">Payment not completed</span><Button variant="brand" onClick={async () => { const r = await api.orders.pay(o.id, location.href); location.href = r.checkoutUrl; }}>{t('cart.payNow')}</Button></Card>}
+      {o.status !== 'PENDING_PAYMENT' && <Card><h2 className="mb-4 font-extrabold">{t('order.track')}</h2><OrderTimeline status={o.status} fulfillment={o.fulfillment} /></Card>}
+      <Card className="flex flex-col gap-3">
+        <h2 className="font-extrabold">Items</h2>
+        {o.lines.map((l) => <div key={l.itemId} className="flex items-center gap-3"><ProductThumb id={l.itemId} name={l.name} kind={l.kind} size={44} /><div className="min-w-0 flex-1 truncate font-semibold">{l.qty} × {l.name}</div><div className="font-bold tabular-nums">{rupees(l.qty * l.pricePaise)}</div></div>)}
+        <hr className="border-line" />
+        {o.fees.filter((f) => f.key !== 'subtotal').map((f) => <div key={f.key} className="flex justify-between text-sm text-muted"><span>{t('fee.' + f.key)}</span><span className="tabular-nums">{rupees(f.amount)}</span></div>)}
+        <div className="flex justify-between text-lg font-black"><span>{t('cart.total')}</span><span className="tabular-nums">{rupees(o.total)}</span></div>
+        <div className="flex justify-between text-sm"><span className="text-muted">Paid</span><span className="font-bold tabular-nums">{rupees(o.paid)}</span></div>
+        {o.due > 0 && <div className="flex justify-between rounded-2xl bg-brand-50 px-4 py-3 text-sm font-semibold text-brand-600"><span>{t('cart.payLater')}</span><span className="tabular-nums">{rupees(o.due)}</span></div>}
+      </Card>
+      {o.deliveryAddress && <Card className="flex gap-3"><MapPin className="shrink-0 text-brand-500" /><div><div className="font-extrabold">Delivering to</div><div className="text-sm text-muted">{o.deliveryAddress}</div></div></Card>}
     </div>
   );
 }
