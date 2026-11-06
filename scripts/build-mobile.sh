@@ -2,6 +2,7 @@
 # Local native build of the mobile apps (no EAS account needed for Android).
 #   scripts/build-mobile.sh android [customer|vendor|all]   -> prebuilt/android/*.apk   (Linux/macOS/Windows-WSL, needs JDK 17 + Android SDK)
 #   scripts/build-mobile.sh ios     [customer|vendor|all]   -> prebuilt/ios/*.app.tar.gz (macOS + Xcode only: simulator build)
+#   IOS_TARGET=device scripts/build-mobile.sh ios all       -> prebuilt/ios/*.ipa (unsigned device build; for BrowserStack real devices)
 # Production store builds (signed AAB/IPA) should use EAS:  pnpm --filter @busyfrnd/customer-mobile build:production
 # API_URL bakes the server address into the app (users can still override it on the login screen).
 set -euo pipefail
@@ -23,9 +24,19 @@ build_one() {
           -PreactNativeArchitectures="${ANDROID_ARCHS:-arm64-v8a,x86_64}" )
       cp android/app/build/outputs/apk/release/app-release.apk "$OUT/busyfrnd-$app.apk"
     else
-      ( cd ios && pod install && xcodebuild -workspace *.xcworkspace -scheme "$(ls -d *.xcworkspace | sed 's/.xcworkspace//')" \
-          -configuration Release -sdk iphonesimulator -derivedDataPath build CODE_SIGNING_ALLOWED=NO )
-      tar -czf "$OUT/busyfrnd-$app.app.tar.gz" -C ios/build/Build/Products/Release-iphonesimulator ./*.app
+      ( cd ios && pod install )
+      SCHEME=$(cd ios && ls -d *.xcworkspace | sed 's/.xcworkspace//')
+      if [ "${IOS_TARGET:-simulator}" = device ]; then
+        # Unsigned device build packaged as .ipa (BrowserStack re-signs for its real devices; see README). UNTESTED here: needs macOS + Xcode.
+        ( cd ios && xcodebuild -workspace "$SCHEME.xcworkspace" -scheme "$SCHEME" -configuration Release -sdk iphoneos \
+            -archivePath build/app.xcarchive archive CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" )
+        rm -rf ios/build/Payload && mkdir -p ios/build/Payload
+        cp -R ios/build/app.xcarchive/Products/Applications/*.app ios/build/Payload/
+        ( cd ios/build && zip -qr "$OUT/busyfrnd-$app.ipa" Payload )
+      else
+        ( cd ios && xcodebuild -workspace "$SCHEME.xcworkspace" -scheme "$SCHEME" -configuration Release -sdk iphonesimulator -derivedDataPath build CODE_SIGNING_ALLOWED=NO )
+        tar -czf "$OUT/busyfrnd-$app.app.tar.gz" -C ios/build/Build/Products/Release-iphonesimulator ./*.app
+      fi
     fi
     rm -rf android ios )
 }

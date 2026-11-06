@@ -19,7 +19,8 @@
     "typecheck": "pnpm build:packages && pnpm -r --no-bail typecheck",
     "test": "pnpm --filter @busyfrnd/shared test && pnpm --filter @busyfrnd/api test",
     "mobile:build:android": "bash scripts/build-mobile.sh android",
-    "mobile:build:ios": "bash scripts/build-mobile.sh ios"
+    "mobile:build:ios": "bash scripts/build-mobile.sh ios",
+    "mobile:build:ios:device": "IOS_TARGET=device bash scripts/build-mobile.sh ios"
   },
   "devDependencies": { "typescript": "~5.8.3" }
 }
